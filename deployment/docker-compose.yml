@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  # ==========================================================
+  # 🧠 Cyberbullying API Service
+  # ==========================================================
+  api:
+    container_name: cyberbullying-api
+    image: cyberbullying-api:latest   # หรือใช้ build: ถ้าสร้างในเครื่อง
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5002:5002"
+    environment:
+      # URI ของโมเดลใน MLflow Registry
+      - MODEL_URI=models:/cyberbullying-tweet-classifier@staging
+      # MLflow Tracking Server (ในกรณีเชื่อมต่อภายใน compose)
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      # ตั้งชื่อ Flask app
+      - FLASK_APP=api/app.py
+    depends_on:
+      - mlflow
+    volumes:
+      # Mount โฟลเดอร์ model หรือ artifact เผื่อกรณีใช้ local path
+      - ./models:/app/models
+      - ./api:/app/api
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5002/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+
+  # ==========================================================
+  # 📦 MLflow Tracking Server (Optional)
+  # ==========================================================
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:latest
+    container_name: mlflow
+    command: >
+      mlflow server
+      --backend-store-uri sqlite:///mlflow.db
+      --default-artifact-root /mlruns
+      --host 0.0.0.0
+      --port 5000
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlruns:/mlruns
+      - ./mlflow.db:/mlflow.db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ==========================================================
+  # 🗄️ Optional: PostgreSQL สำหรับ production MLflow backend
+  # ==========================================================
+  # db:
+  #   image: postgres:15
+  #   container_name: mlflow-db
+  #   environment:
+  #     POSTGRES_USER: mlflow
+  #     POSTGRES_PASSWORD: mlflow123
+  #     POSTGRES_DB: mlflow_db
+  #   volumes:
+  #     - ./postgres-data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+  #   restart: unless-stopped
