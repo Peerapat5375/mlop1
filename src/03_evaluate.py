@@ -123,8 +123,19 @@ class CyberbullyingEvaluator:
                     else:
                         per_preds.append(single)
                 except Exception as e:
-                    print(f"Error predicting sample {i}: {e} -- inserting fallback label 0")
-                    per_preds.append(0)
+                    # Try passing a one-row DataFrame with expected column name
+                    try:
+                        df_single = pd.DataFrame({"clean_tweets": [s]})
+                        single = self.model.predict(df_single)
+                        if hasattr(single, "__len__"):
+                            per_preds.append(single[0])
+                        else:
+                            per_preds.append(single)
+                        print(f"Recovered prediction for sample {i} using DataFrame input.")
+                    except Exception as e2:
+                        print(f"Error predicting sample {i}: {e} (list) and {e2} (DataFrame). Sample type={type(s).__name__} repr={repr(s)[:200]}")
+                        # append a fallback label 0
+                        per_preds.append(0)
 
             y_pred = np.array(per_preds, dtype=int)
         else:
