@@ -11,7 +11,7 @@ import numpy as np
 # Add src directory to Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from src.01_data_preprocessing import clean_text
+from src.preprocessing import clean_text
 
 def test_clean_text_basic():
     """Test basic text cleaning functionality"""

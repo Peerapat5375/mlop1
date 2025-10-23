@@ -86,13 +86,13 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run Data Preprocessing
-        run: python src/01_data_preprocessing.py
+        run: python src/preprocessing.py
 
       - name: Run Model Training
-        run: python src/02_train.py
+        run: python src/train.py
 
       - name: Run Model Evaluation
-        run: python src/03_evaluate.py
+        run: python src/evaluate.py
 
       - name: Upload MLflow artifacts for inspection
         if: success()
