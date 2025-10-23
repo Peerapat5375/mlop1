@@ -64,15 +64,47 @@ class CyberbullyingEvaluator:
         # Convert to numpy array with object dtype to ensure sklearn's
         # text transformers receive proper Python strings (not e.g. ints).
         X_arr = np.array(X_list, dtype=object)
+        # Sanitize inputs: replace items that contain no alphabetic characters
+        # with an empty string to avoid .lower() on non-text types inside
+        # sklearn's text preprocessing.
+        non_alpha_idx = [i for i, v in enumerate(X_arr) if not any(c.isalpha() for c in str(v))]
+        if non_alpha_idx:
+            print(f"⚠️ Replacing {len(non_alpha_idx)} non-alphabetic inputs with empty strings (sample indexes: {non_alpha_idx[:10]})")
+            for i in non_alpha_idx:
+                X_arr[i] = ""
+        # Try a sequence of input formats to accommodate model input expectations
+        last_exc = None
         try:
             y_pred = self.model.predict(X_arr)
-        except Exception as e:
-            # Minimal diagnostic: report first few non-string items (if any)
-            bad = [(i, type(v), repr(v)) for i, v in enumerate(X_arr[:100]) if not isinstance(v, str)]
-            if bad:
-                print("⚠️ Found non-string items in inputs (index, type, repr):", bad[:5])
-            print("Error while predicting:", str(e))
-            raise
+        except Exception as e1:
+            print("Error while predicting with numpy array (object dtype):", str(e1))
+            last_exc = e1
+
+            # Diagnostic: show types/representations for first 20 items
+            sample = list(enumerate(X_arr[:20]))
+            print("Input sample types/values (first 20):")
+            for i, v in sample:
+                print(f"  [{i}] type={type(v).__name__} repr={repr(v)[:200]}")
+
+            # Try pandas Series
+            try:
+                X_ser = pd.Series(X_list)
+                y_pred = self.model.predict(X_ser)
+                print("Prediction succeeded with pandas.Series input.")
+            except Exception as e2:
+                print("Prediction with pandas.Series failed:", str(e2))
+                last_exc = e2
+
+                # Try pandas DataFrame with a common column name used in the pipeline
+                try:
+                    X_df = pd.DataFrame({"clean_tweets": X_list})
+                    y_pred = self.model.predict(X_df)
+                    print("Prediction succeeded with pandas.DataFrame input (clean_tweets column).")
+                except Exception as e3:
+                    print("Prediction with pandas.DataFrame failed:", str(e3))
+                    last_exc = e3
+                    # Give up and re-raise the last exception with context
+                    raise last_exc
         if len(y_pred) != len(y_test):
             raise ValueError(f"❌ Prediction length mismatch: got {len(y_pred)} predictions for {len(y_test)} samples")
 

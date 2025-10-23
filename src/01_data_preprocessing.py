@@ -98,7 +98,14 @@ def preprocess_cyberbullying_data(
         # 2️⃣ Clean tweets
         df["tweet_text"] = df["tweet_text"].astype(str)
         df["clean_tweets"] = df["tweet_text"].apply(clean_tweet)
+        # Ensure clean_tweets are strings and drop rows that become empty after cleaning
+        df["clean_tweets"] = df["clean_tweets"].astype(str)
         df = df[df["clean_tweets"].str.strip() != ""].copy()
+
+        # Drop rows that are numeric-only or contain no alphabetic characters
+        # (helps avoid cases where non-text values sneak into the dataset)
+        df = df[df["clean_tweets"].str.contains(r"[A-Za-z]", regex=True)]
+
         df.drop_duplicates("clean_tweets", inplace=True)
 
         # 3️⃣ Encode labels
