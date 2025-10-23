@@ -42,15 +42,36 @@ STOPWORDS = set(stopwords_list)
 # -------------------------------------------------------
 def clean_text(text):
     """Clean tweet text: remove usernames, hashtags, links, punctuation, lowercase, tokenize, remove stopwords."""
+    if text is None:
+        return ''
+        
     text = str(text)
+    if not text.strip():
+        return ''
+        
+    # Remove hashtags but keep the text after #
     words = text.split()
-    words = [w for w in words if not w.startswith("@") and not w.startswith("#") and not w.lower().startswith("http")]
+    words = [w.lstrip('#@') for w in words if not w.lower().startswith('http')]
     text = " ".join(words)
+    
+    # Remove punctuation
     for mark in punctuation:
-        text = text.replace(mark, "")
-    tokens = word_tokenize(text.lower())
-    tokens = [lemmatizer.lemmatize(w) for w in tokens if w not in STOPWORDS and w.isalpha()]
-    return " ".join(tokens)
+        text = text.replace(mark, " ")
+    
+    # Tokenize and clean
+    text = text.lower()
+    tokens = word_tokenize(text)
+    
+    # Only lemmatize single words, keep phrases intact
+    cleaned_tokens = []
+    for token in tokens:
+        if token not in STOPWORDS:
+            if token.isalpha():
+                cleaned_tokens.append(lemmatizer.lemmatize(token))
+            elif any(c.isalpha() for c in token):
+                cleaned_tokens.append(token)
+    
+    return " ".join(cleaned_tokens)
 
 # -------------------------------------------------------
 # Label encoding
