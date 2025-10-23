@@ -37,10 +37,24 @@ def train_and_register(preprocessing_run_id: str):
     evaluate, log metrics, and register model if performance is good.
     """
     print(f"📥 Loading preprocessed data from MLflow Run ID: {preprocessing_run_id}")
-    local_path = download_artifacts(run_id=preprocessing_run_id, artifact_path="processed_data")
-
-    train_df = pd.read_csv(os.path.join(local_path, "train.csv"))
-    test_df = pd.read_csv(os.path.join(local_path, "test.csv"))
+    # If preprocessing_run_id looks like a run id, attempt to download artifacts
+    # from MLflow. Otherwise, if preprocessing_run_id is 'local' or if a local
+    # processed_data directory exists, load from there.
+    if preprocessing_run_id and preprocessing_run_id.lower() != "local":
+        local_path = download_artifacts(run_id=preprocessing_run_id, artifact_path="processed_data")
+        train_df = pd.read_csv(os.path.join(local_path, "train.csv"))
+        test_df = pd.read_csv(os.path.join(local_path, "test.csv"))
+    else:
+        # Fallback to repository-local processed_data
+        local_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "processed_data"))
+        train_csv = os.path.join(local_dir, "train.csv")
+        test_csv = os.path.join(local_dir, "test.csv")
+        if not os.path.exists(train_csv) or not os.path.exists(test_csv):
+            raise FileNotFoundError(
+                f"Processed data not found. Provide a preprocessing run id or place files at {local_dir}"
+            )
+        train_df = pd.read_csv(train_csv)
+        test_df = pd.read_csv(test_csv)
 
     X_train = train_df[TEXT_COLUMN].astype(str)
     y_train = train_df[TARGET_COLUMN].astype(int)
@@ -146,11 +160,16 @@ def train_and_register(preprocessing_run_id: str):
             print(f"⚠️ F1 Score {f1:.4f} < {F1_THRESHOLD} ❌ Model not registered")
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python src/02_train.py <preprocessing_run_id>")
-        sys.exit(1)
+    # Priority: CLI arg > PREPROCESS_RUN_ID env var > local processed_data
+    preprocessing_run_id = None
+    if len(sys.argv) == 2:
+        preprocessing_run_id = sys.argv[1]
+    else:
+        preprocessing_run_id = os.getenv("PREPROCESS_RUN_ID")
 
-    preprocessing_run_id = sys.argv[1]
+    if not preprocessing_run_id:
+        # If no id provided, use 'local' to trigger local processed_data fallback
+        preprocessing_run_id = "local"
     train_and_register(preprocessing_run_id)
 
 
