@@ -40,7 +40,7 @@ STOPWORDS = set(stopwords_list)
 # -------------------------------------------------------
 # Text cleaning helpers
 # -------------------------------------------------------
-def clean_tweet(text):
+def clean_text(text):
     """Clean tweet text: remove usernames, hashtags, links, punctuation, lowercase, tokenize, remove stopwords."""
     text = str(text)
     words = text.split()
@@ -97,7 +97,7 @@ def preprocess_cyberbullying_data(
 
         # 2️⃣ Clean tweets
         df["tweet_text"] = df["tweet_text"].astype(str)
-        df["clean_tweets"] = df["tweet_text"].apply(clean_tweet)
+        df["clean_tweets"] = df["tweet_text"].apply(clean_text)
         # Ensure clean_tweets are strings and drop rows that become empty after cleaning
         df["clean_tweets"] = df["clean_tweets"].astype(str)
         df = df[df["clean_tweets"].str.strip() != ""].copy()
