@@ -67,7 +67,7 @@ ENCODE_MAP = {
 # Main preprocessing pipeline
 # -------------------------------------------------------
 def preprocess_cyberbullying_data(
-    data_path="C:/deploy_model/data/cyberbullying_tweets.csv",
+    data_path=None,
     test_size=0.2,
     random_state=42
 ):
@@ -77,9 +77,21 @@ def preprocess_cyberbullying_data(
         run_id = run.info.run_id
         print(f"🚀 Starting preprocessing run: {run_id}")
 
+        # Resolve dataset path: use DATA_PATH env var if provided, otherwise
+        # prefer a repository-relative file `data/cyberbullying_tweets.csv`.
+        if data_path is None:
+            repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+            data_path = os.getenv("DATA_PATH", os.path.join(repo_root, "data", "cyberbullying_tweets.csv"))
+
         # 1️⃣ Load dataset
         if not os.path.exists(data_path):
-            raise FileNotFoundError(f"❌ Dataset not found at {data_path}")
+            cwd = os.getcwd()
+            raise FileNotFoundError(
+                f"❌ Dataset not found at {data_path}\n" \
+                f"Current working directory: {cwd}\n" \
+                "Hint: set DATA_PATH env var or place the CSV at data/cyberbullying_tweets.csv"
+            )
+
         df = pd.read_csv(data_path)
         print(f"✅ Loaded dataset: {df.shape}")
 
