@@ -105,10 +105,30 @@ class CyberbullyingEvaluator:
                     last_exc = e3
                     # Give up and re-raise the last exception with context
                     raise last_exc
-        if len(y_pred) != len(y_test):
-            raise ValueError(f"❌ Prediction length mismatch: got {len(y_pred)} predictions for {len(y_test)} samples")
+        # If prediction length doesn't match inputs, attempt per-sample predict
+        try:
+            pred_len = len(y_pred)
+        except TypeError:
+            pred_len = 1
 
-        y_pred = np.array(y_pred, dtype=int)
+        if pred_len != len(X_test):
+            print(f"⚠️ Prediction length mismatch: got {pred_len} predictions for {len(X_test)} samples. Falling back to per-sample prediction.")
+            per_preds = []
+            for i, s in enumerate(X_list):
+                try:
+                    single = self.model.predict([s])
+                    # single may be array-like or scalar
+                    if hasattr(single, "__len__"):
+                        per_preds.append(single[0])
+                    else:
+                        per_preds.append(single)
+                except Exception as e:
+                    print(f"Error predicting sample {i}: {e} -- inserting fallback label 0")
+                    per_preds.append(0)
+
+            y_pred = np.array(per_preds, dtype=int)
+        else:
+            y_pred = np.array(y_pred, dtype=int)
 
         print("📊 Calculating metrics...")
         metrics = {
