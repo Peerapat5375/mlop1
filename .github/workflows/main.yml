@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: false
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -31,6 +33,22 @@ jobs:
 
       - name: Test with pytest
         run: |
+          # Start the API in the background using gunicorn bound to port 5002
+          # so tests can connect to it. We use --threads to keep it lightweight.
+          echo "Starting API server on port 5002..."
+          (gunicorn --chdir api "app:app" --bind 0.0.0.0:5002 --workers 1 --threads 2 &) 
+
+          # Wait for the health endpoint to be available (timeout 30s)
+          for i in {1..30}; do
+            if curl --silent --fail http://127.0.0.1:5002/health >/dev/null 2>&1; then
+              echo "API is up"
+              break
+            fi
+            echo "Waiting for API... ($i)"
+            sleep 1
+          done
+
+          # Run pytest; if no tests found, exit 0
           pytest || (if [ $? -eq 5 ]; then echo "Pytest finished: No tests found."; exit 0; else exit $?; fi)
 
   build-and-train:
@@ -44,6 +62,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: false
 
       - name: Set up Python
         uses: actions/setup-python@v5
