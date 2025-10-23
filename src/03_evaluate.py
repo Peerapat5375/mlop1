@@ -61,7 +61,18 @@ class CyberbullyingEvaluator:
         # numeric values or unexpected types which break text preprocessing
         # (e.g. calling .lower()). Coerce every input to str to avoid that.
         X_list = [str(x) for x in X_test.tolist()]
-        y_pred = self.model.predict(X_list)
+        # Convert to numpy array with object dtype to ensure sklearn's
+        # text transformers receive proper Python strings (not e.g. ints).
+        X_arr = np.array(X_list, dtype=object)
+        try:
+            y_pred = self.model.predict(X_arr)
+        except Exception as e:
+            # Minimal diagnostic: report first few non-string items (if any)
+            bad = [(i, type(v), repr(v)) for i, v in enumerate(X_arr[:100]) if not isinstance(v, str)]
+            if bad:
+                print("⚠️ Found non-string items in inputs (index, type, repr):", bad[:5])
+            print("Error while predicting:", str(e))
+            raise
         if len(y_pred) != len(y_test):
             raise ValueError(f"❌ Prediction length mismatch: got {len(y_pred)} predictions for {len(y_test)} samples")
 
