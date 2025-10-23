@@ -22,6 +22,7 @@ RUN apt-get update && apt-get install -y \
     gcc \
     curl \
     && rm -rf /var/lib/apt/lists/*
+
 # เพิ่ม curl (ใช้กับ HEALTHCHECK)
 # gcc จำเป็นสำหรับการ compile บาง package เช่น numpy, scipy
 
