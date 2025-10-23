@@ -67,10 +67,19 @@ def clean_text(text):
     for token in tokens:
         if token not in STOPWORDS:
             if token.isalpha():
-                cleaned_tokens.append(lemmatizer.lemmatize(token))
+                lemma = lemmatizer.lemmatize(token)
+                if (
+                    token.endswith("s")
+                    and not token.endswith("ss")
+                    and len(token) > 3
+                    and lemma == token[:-1]
+                ):
+                    cleaned_tokens.append(token)
+                else:
+                    cleaned_tokens.append(lemma)
             elif any(c.isalpha() for c in token):
                 cleaned_tokens.append(token)
-    
+
     return " ".join(cleaned_tokens)
 
 # -------------------------------------------------------
