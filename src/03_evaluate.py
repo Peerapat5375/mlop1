@@ -183,6 +183,15 @@ class CyberbullyingEvaluator:
         """Run full evaluation pipeline"""
         self.load_model()
         X_test, y_test = self.load_data()
+        # Extra safety: drop test samples that contain no alphabetic characters
+        # to avoid prediction errors on numeric-only or malformed inputs.
+        X_test = X_test.astype(str)
+        has_alpha = X_test.str.contains(r"[A-Za-z]", regex=True)
+        if not has_alpha.all():
+            drop_idx = list(X_test.index[~has_alpha])
+            print(f"⚠️ Dropping {len(drop_idx)} test samples with no alphabetic characters (sample indexes: {drop_idx[:10]})")
+            X_test = X_test[has_alpha].reset_index(drop=True)
+            y_test = y_test[has_alpha].reset_index(drop=True)
         metrics, y_pred = self.evaluate(X_test, y_test)
 
         os.makedirs("models/evaluation", exist_ok=True)
