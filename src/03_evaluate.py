@@ -57,9 +57,11 @@ class CyberbullyingEvaluator:
     def evaluate(self, X_test, y_test):
         """Compute core metrics"""
         print("🔎 Making predictions...")
-        X_list = X_test.tolist()  # ✅ Ensure correct format
+        # Defensive: ensure all inputs are strings. Some datasets may contain
+        # numeric values or unexpected types which break text preprocessing
+        # (e.g. calling .lower()). Coerce every input to str to avoid that.
+        X_list = [str(x) for x in X_test.tolist()]
         y_pred = self.model.predict(X_list)
-
         if len(y_pred) != len(y_test):
             raise ValueError(f"❌ Prediction length mismatch: got {len(y_pred)} predictions for {len(y_test)} samples")
 
