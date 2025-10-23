@@ -25,8 +25,13 @@ TARGET_COLUMN = "label"
 TEXT_COLUMN = "clean_tweets"
 F1_THRESHOLD = 0.85
 
-# Set MLflow tracking URI (local)aaaa
-mlflow.set_tracking_uri("file:./mlruns")
+# Resolve MLflow tracking URI from environment when available so CI/CD
+# uses the same backend that evaluation reads from; default to local store.
+tracking_uri = os.getenv("MLFLOW_TRACKING_URI")
+if tracking_uri:
+    mlflow.set_tracking_uri(tracking_uri)
+else:
+    mlflow.set_tracking_uri("file:./mlruns")
 mlflow.set_experiment(EXPERIMENT_NAME)
 
 
